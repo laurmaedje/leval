@@ -19,29 +19,29 @@ pub enum ParseError {
 /// For example:
 /// tokenize("55+7-3*7").unwrap() is equal to vec![Num(55), Op('+'), Num(7), Op('-'), Num(3), Op('*'), Num(7)]
 pub fn tokenize(expression: &str) -> Result<Vec<Token>, ParseError> {
-    // Iterator of the passed expression
-    let mut s = expression.to_string();
+    // Parse the passed expression into a vector of chars
+    let mut chars = expression.chars().collect::<Vec<char>>();
 
-    // Buffer for calculated tokens
+    // Buffer for the calculated output tokens
     let mut toks = Vec::<Token>::new();
 
     // Iterate through the whole string
-    while !s.is_empty() {
-        match s.remove(0) {
+    while !chars.is_empty() {
+        match chars.remove(0) {
             // Add operation token to toks list
             op @ '+' | op @ '-' | op @ '*' | op @ '/' => toks.push(Token::Op(op)),
 
             // Add number to toks list
             dig if dig.is_digit(10) => { 
                 // Go ahead while there is a digit and buffer into buf variable                
-                let mut buf = dig.to_string();
-                while let Some(chr) = s.chars().nth(0) {
-                    if chr.is_digit(10) {
-                        buf.push(s.remove(0));
-                    } else {
+                let mut buf = dig.to_string();    
+                while let Some(&chr) = chars.get(0) {
+                    if !chr.is_digit(10) {
                         break;
-                    }
+                    } 
+                    buf.push(chars.remove(0));
                 }
+                
                 toks.push(Token::Num(buf.parse().unwrap()))
             },
 
@@ -57,12 +57,16 @@ pub fn tokenize(expression: &str) -> Result<Vec<Token>, ParseError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use Token::*;
 
     #[test]
     fn parse_working() {
-        use Token::*;
-
         assert_eq!(tokenize("55+7-3*7").unwrap(), 
             vec![Num(55), Op('+'), Num(7), Op('-'), Num(3), Op('*'), Num(7)]);
+    }
+
+    #[test]
+    fn test_iter() {
+        assert_eq!(tokenize("7+5").unwrap(), vec![Num(7), Op('+'), Num(5)]);
     }
 }
