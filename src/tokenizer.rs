@@ -1,23 +1,15 @@
-#![allow(unused_variables)]
-#![allow(dead_code)]
+use parse_error::ParseError;
 
 /// A Token is one unit in an expression, e.g. a number or an operation
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Token {
     Num(u32),
     Op(char),
 }
 
-/// Representation of any Error that can occur while parsing
-/// Can be returned by tokenize()
-#[derive(Debug)]
-pub enum ParseError {
-    UnknownSymbol,
-}
-
 /// Takes a string slice and returns a vector of Tokens (wrapped in a Result) or a ParseError
 /// For example:
-/// tokenize("55+7-3*7").unwrap() is equal to vec![Num(55), Op('+'), Num(7), Op('-'), Num(3), Op('*'), Num(7)]
+/// tokenize("16+2*3").unwrap() is equal to vec![Num(16), Op('+'), Num(2), Op('*'), Num(3)]
 pub fn tokenize(expression: &str) -> Result<Vec<Token>, ParseError> {
     // Parse the passed expression into a vector of chars
     let mut chars = expression.chars().collect::<Vec<char>>();
@@ -35,7 +27,7 @@ pub fn tokenize(expression: &str) -> Result<Vec<Token>, ParseError> {
             dig if dig.is_digit(10) => { 
                 // Go ahead while there is a digit and buffer into buf variable                
                 let mut buf = dig.to_string();    
-                while let Some(&chr) = chars.get(0) {
+                while let Some(&chr) = chars.first() {
                     if !chr.is_digit(10) {
                         break;
                     } 
@@ -62,13 +54,10 @@ mod tests {
     use tokenizer::Token::*;
 
     #[test]
-    fn parse_working() {
+    fn tokenizer_working() {
         assert_eq!(tokenize("55+7-3*7").unwrap(), 
             vec![Num(55), Op('+'), Num(7), Op('-'), Num(3), Op('*'), Num(7)]);
-    }
 
-    #[test]
-    fn test_iter() {
-        assert_eq!(tokenize("7+5").unwrap(), vec![Num(7), Op('+'), Num(5)]);
+        assert_eq!(tokenize("7+5").unwrap(), vec![Num(7), Op('+'), Num(5)]);        
     }
 }
