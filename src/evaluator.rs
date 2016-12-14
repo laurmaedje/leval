@@ -1,64 +1,52 @@
-#![allow(unused_mut)]
-
 use tokenizer::*;
 use tokenizer::Token::*;
 use parse_error::ParseError;
 
-/// Return the first number in current token stream if there is one
-/// Otherwise return a ParseError::NumberExpected
-macro_rules! parse {
-    (num => $vec:ident) => (
-        match $vec.get(0) {
-            Some(&Num(n)) => { $vec.remove(0); n },
-            _ => return Err(ParseError::NumberExpected),
-        }
-    );
-    (fact => $vec:ident) => (
-        match factor($vec) {
-            Ok(n) => n,
-            _ => return Err(ParseError::FactorExpected),
-        }
-    );
-}
-
-/// Evaluate the value of a token stream
-/// For example:
-/// vec![Num(16), Op('+'), Num(2), Op('*'), Num(3)] is equal to 22i32
-
-
-pub fn expr(toks: &mut Vec<Token>) -> Result<i32, ParseError> {
-    println!("{:?}", toks);
+/// Takes a mutable token stream and eats it. Returns either the result as i32 or a ParseError
+/// Example: expr(&mut vec![Num(16), Op('+'), Num(2), Op('*'), Num(3)]) is equal to Ok(22)
+pub fn expr(mut toks: &mut Vec<Token>) -> Result<i32, ParseError> {
     // Parse the first factor
-    let mut sum = parse!(fact => toks);
+    let mut sum = factor(&mut toks)?;
 
     // As long as the look-ahead Token is an AddOp, parse it and take a new factor
     while let Some(&AddOp(op)) = toks.get(0) {
         toks.remove(0);
-        let v = parse!(fact => toks);
+        let v = factor(&mut toks)?;
         match op {
             '+' => sum += v,
             '-' => sum -= v,
-            _ => unreachable!()
+            _ => unreachable!(),
         }
     }
-    Ok(sum) 
+    Ok(sum)
 }
 
-pub fn factor(mut toks: &mut Vec<Token>) -> Result<i32, ParseError> {
+/// Parse a factor: a number or a product, return the result as i32 or a ParseError
+fn factor(mut toks: &mut Vec<Token>) -> Result<i32, ParseError> {
     // Parse a first number
-    let mut product = parse!(num => toks);
-    
+    let mut product = num(&mut toks)?;
     // As long as the look-ahead Token is a MulOp, parse it and take a new number
     while let Some(&MulOp(op)) = toks.get(0) {
         toks.remove(0);
-        let v = parse!(num => toks);
+        let v = num(&mut toks)?;
         match op {
             '*' => product *= v,
             '/' => product /= v,
-            _ => unreachable!()
+            _ => unreachable!(),
         }
     }
     Ok(product)
+}
+
+/// Return the first number of token stream as i32, if there is none return a ParseError::NumberExpected
+fn num(mut toks: &mut Vec<Token>) -> Result<i32, ParseError> {
+    match toks.get(0) {
+        Some(&Num(n)) => {
+            toks.remove(0);
+            Ok(n)
+        }
+        _ => return Err(ParseError::NumberExpected),
+    }
 }
 
 
@@ -71,10 +59,7 @@ mod tests {
     use evaluator::*;
 
     #[test]
-    fn evaluater_working() {
-        //assert_eq!(evaluate(vec![Num(16), MulOp('*'), Num(2), AddOp('+'), Num(3)]).unwrap(), 0);
-
-        let mut v = vec![Num(16), MulOp('*'), Num(2), AddOp('+'), Num(3)];
-        assert_eq!(expr(&mut v).unwrap(), 35);
+    fn evaluater_working() {       
+        assert_eq!(expr(&mut vec![Num(16), MulOp('*'), Num(2), AddOp('+'), Num(3)]).unwrap(), 35);
     }
 }
