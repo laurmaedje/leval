@@ -3,8 +3,9 @@ use parse_error::ParseError;
 /// A Token is one unit in an expression, e.g. a number or an operation
 #[derive(Debug, PartialEq, Clone)]
 pub enum Token {
-    Num(u32),
-    Op(char),
+    Num(i32),
+    AddOp(char),
+    MulOp(char),
 }
 
 /// Takes a string slice and returns a vector of Tokens (wrapped in a Result) or a ParseError
@@ -21,8 +22,9 @@ pub fn tokenize(expression: &str) -> Result<Vec<Token>, ParseError> {
     while !chars.is_empty() {
         match chars.remove(0) {
             // Add operation token to toks list
-            op @ '+' | op @ '-' | op @ '*' | op @ '/' => toks.push(Token::Op(op)),
-
+            p @ '+' | p @ '-' => toks.push(Token::AddOp(p)),
+            p @ '*' | p @ '/' => toks.push(Token::MulOp(p)),
+            
             // Add number to toks list
             dig if dig.is_digit(10) => { 
                 // Go ahead while there is a digit and buffer into buf variable                
@@ -56,8 +58,8 @@ mod tests {
     #[test]
     fn tokenizer_working() {
         assert_eq!(tokenize("55+7-3*7").unwrap(), 
-            vec![Num(55), Op('+'), Num(7), Op('-'), Num(3), Op('*'), Num(7)]);
+            vec![Num(55), AddOp('+'), Num(7), AddOp('-'), Num(3), MulOp('*'), Num(7)]);
 
-        assert_eq!(tokenize("7+5").unwrap(), vec![Num(7), Op('+'), Num(5)]);        
+        assert_eq!(tokenize("7+5").unwrap(), vec![Num(7), AddOp('+'), Num(5)]);        
     }
 }
