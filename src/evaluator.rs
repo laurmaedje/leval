@@ -24,11 +24,11 @@ pub fn expr(mut toks: &mut Vec<Token>) -> Result<i32, ParseError> {
 /// Parse a factor: a number or a product, return the result as i32 or a ParseError
 fn factor(mut toks: &mut Vec<Token>) -> Result<i32, ParseError> {
     // Parse a first number
-    let mut product = num(&mut toks)?;
+    let mut product = atomic(&mut toks)?;
     // As long as the look-ahead Token is a MulOp, parse it and take a new number
     while let Some(&MulOp(op)) = toks.get(0) {
         toks.remove(0);
-        let v = num(&mut toks)?;
+        let v = atomic(&mut toks)?;
         match op {
             '*' => product *= v,
             '/' => product /= v,
@@ -38,12 +38,35 @@ fn factor(mut toks: &mut Vec<Token>) -> Result<i32, ParseError> {
     Ok(product)
 }
 
-/// Return the first number of token stream as i32, if there is none return a ParseError::NumberExpected
-fn num(mut toks: &mut Vec<Token>) -> Result<i32, ParseError> {
+/// Return the first number of token stream or an expression wrapped in parenthesis as i32.
+/// If there is none return a ParseError::NumberExpected
+/// If parens are wrong, returns ParseError::WrongClosingParen or ParseError::MissingClosingParen
+fn atomic(mut toks: &mut Vec<Token>) -> Result<i32, ParseError> {
     match toks.get(0) {
+        // Found a number
         Some(&Num(n)) => {
             toks.remove(0);
             Ok(n)
+        }
+        // Found a Paren, tell if it is the correct one, and if not return
+        // ParseError::WrongClosingParen or ParseError::MissingClosingParen
+        Some(&LParen(lp)) => {
+            toks.remove(0);
+            let value = expr(&mut toks)?;
+            match toks.get(0) { 
+                Some(&RParen(rp)) => {
+                    match (lp, rp) {
+                        // Parens are correct
+                        ('(', ')') | ('[', ']') => (),
+                        // The wrong closing paren appeared
+                        ('(', ']') | ('[', ')') => return Err(ParseError::WrongClosingParen),
+                        _ => unreachable!(),
+                    }
+                }
+                _ => return Err(ParseError::MissingClosingParen),
+            }
+            toks.remove(0);
+            Ok(value)
         }
         _ => return Err(ParseError::NumberExpected),
     }
@@ -54,12 +77,17 @@ fn num(mut toks: &mut Vec<Token>) -> Result<i32, ParseError> {
 // Unit Test
 #[cfg(test)]
 mod tests {
-    // use tokenizer::*;
     use tokenizer::Token::*;
     use evaluator::*;
 
     #[test]
-    fn evaluater_working() {       
-        assert_eq!(expr(&mut vec![Num(16), MulOp('*'), Num(2), AddOp('+'), Num(3)]).unwrap(), 35);
+    fn evaluater_working() {
+        assert_eq!(
+            expr(&mut vec![Num(16), MulOp('*'), Num(2), AddOp('+'), Num(3)]),
+            Ok(35));
+
+        assert_eq!(
+            expr(&mut vec![LParen('('), Num(5), AddOp('+'), Num(5), RParen(')'), MulOp('*'), Num(3)]), 
+            Ok(30));
     }
 }

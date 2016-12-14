@@ -9,15 +9,22 @@ mod evaluator;
 pub use parse_error::ParseError;
 
 /// Takes a string slice and returns its computed value as i32 or a ParseError
+/// As Parentheses either `(...)` or `[...]` can be used:
 /// # Examples
 /// ```
 /// use eval::{evaluate, ParseError};
 ///
-/// let value = evaluate("5*5+2-4");
-/// assert_eq!(value, Ok(23));
+/// let v1 = evaluate("5*5+2-4");
+/// assert_eq!(v1, Ok(23));
+///
+/// let v2 = evaluate("(2+5) * 3");
+/// assert_eq!(v2, Ok(21));
 /// 
-/// let other = evaluate("3+5$2");
-/// assert_eq!(other, Err(ParseError::UnknownSymbol));
+/// let v3 = evaluate("(3+2] * 2");
+/// assert_eq!(v3, Err(ParseError::WrongClosingParen));
+///
+/// let v4 = evaluate("3+5$2");
+/// assert_eq!(v4, Err(ParseError::UnknownSymbol));
 /// ```
 pub fn evaluate(s: &str) -> Result<i32, parse_error::ParseError> {
     let mut toks = tokenizer::tokenize(s)?;

@@ -10,11 +10,23 @@ use std::fmt;
 ///
 /// let err2 = evaluate("4+6+");
 /// assert_eq!(err2, Err(ParseError::NumberExpected));
+///
+/// let err3 = evaluate("(4+2]*3");
+/// assert_eq!(err3, Err(ParseError::WrongClosingParen));
+///
+/// let err4 = evaluate("3*(5+2");
+/// assert_eq!(err4, Err(ParseError::MissingClosingParen));
 /// ```
 #[derive(Debug, PartialEq, Clone)]
 pub enum ParseError {
+    /// An unknown symbol appeared
     UnknownSymbol,
+    /// A number is missing
     NumberExpected,
+    /// A parenthesized expression is not closed by a closing paren
+    MissingClosingParen,
+    /// A parenthesized expression started with one paren and is closed by a different one
+    WrongClosingParen,
 }
 
 impl fmt::Display for ParseError {
