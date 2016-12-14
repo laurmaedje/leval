@@ -8,6 +8,7 @@ pub enum Token {
     MulOp(char),
     LParen(char),
     RParen(char),
+    Var(String),
 }
 
 /// Takes a string slice and returns a vector of Tokens (wrapped in a Result) or a ParseError
@@ -36,9 +37,9 @@ pub fn tokenize(expression: &str) -> Result<Vec<Token>, ParseError> {
             p @ '*' | p @ '/' => toks.push(Token::MulOp(p)),
 
             // Add number to toks list
-            dig if dig.is_digit(10) => {
+            d if d.is_digit(10) => {
                 // Go ahead while there is a digit and buffer into buf variable
-                let mut buf = dig.to_string();
+                let mut buf = d.to_string();
                 while let Some(&chr) = chars.first() {
                     if !chr.is_digit(10) {
                         break;
@@ -47,7 +48,20 @@ pub fn tokenize(expression: &str) -> Result<Vec<Token>, ParseError> {
                 }
 
                 toks.push(Token::Num(buf.parse().unwrap()))
-            }
+            },
+
+            // Add variable to toks list
+            c if c.is_alphabetic() => {
+                let mut buf = c.to_string();
+                while let Some(&chr) = chars.first() {
+                    if !chr.is_alphanumeric() {
+                        break;
+                    }
+                    buf.push(chars.remove(0));
+                }
+
+                toks.push(Token::Var(buf));
+            },
 
             // The current head symbol is unknown -> error
             _ => return Err(ParseError::UnknownSymbol),
@@ -83,5 +97,9 @@ mod tests {
         assert_eq!(
             tokenize("(4+3)*4"), 
             Ok(vec![LParen('('), Num(4), AddOp('+'), Num(3), RParen(')'), MulOp('*'), Num(4)]));
+
+        assert_eq!(
+            tokenize("x+5"), 
+            Ok(vec![Var(String::from("x")), AddOp('+'), Num(5)]));
     }
 }
