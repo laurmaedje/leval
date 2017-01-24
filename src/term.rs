@@ -1,7 +1,7 @@
 use std::collections::LinkedList;
 use std::collections::HashMap;
 
-use parse_error::*;
+use error::*;
 
 use self::MathToken::*;
 
@@ -28,9 +28,9 @@ impl Term {
     /// ```
     /// # use eval::*; 
     /// # #[allow(unused_variables)]
-    /// let term = Term::new("2*x + 4^2").unwrap();
+    /// let term = Term::new("2*$x + 4^2").unwrap();
     /// ```
-    pub fn new<S>(expression: S) -> Result<Term, ParseError> where S: Into<String> {            
+    pub fn new<S>(expression: S) -> Result<Term, MathError> where S: Into<String> {            
         let mut chars = expression.into().chars().collect::<LinkedList<char>>();
         let mut stack = Vec::new();
         let mut toks = Vec::with_capacity(chars.len());
@@ -66,10 +66,14 @@ impl Term {
                 },
 
                 // Variable
-                character @ 'a'...'z' => {
-                     toks.push(Var(character));
-                     has_var = true;
-                },
+                '$' => {
+                     if let Some(character @ 'a' ... 'z') = chars.pop_front() {
+                         toks.push(Var(character));                                    
+                         has_var = true;
+                     } else {
+                         return Err(MathError::VariableExpected);
+                     }
+                }
 
                 // Operation
                 o1 if is_op(o1) => {
@@ -78,7 +82,7 @@ impl Term {
                         match o1 {
                             '+' => {},
                             '-' => stack.push('~'),
-                            _ => return Err(ParseError::UnknownSymbol), 
+                            _ => return Err(MathError::UnknownSymbol), 
                         }
                      } else {
                         while let Some(&o2) = stack.last() {                        
@@ -108,13 +112,13 @@ impl Term {
                             (')', Some('(')) | (']', Some('[')) => break,                          
                             (_, Some(op)) => toks.push(if is_unop(op) { UnOp(op) } else { BinOp(op) }),
                             // Parens are unbalanced (or the wrong closing paren occured)
-                            _ => return Err(ParseError::UnbalancedParens),
+                            _ => return Err(MathError::UnbalancedParens),
                         }
                     }
                 },
 
                 // Invalid Symbol
-                _ => return Err(ParseError::UnknownSymbol),
+                _ => return Err(MathError::UnknownSymbol),
             }
             last = chr;
         }
@@ -124,7 +128,7 @@ impl Term {
         for item in stack {
             match item {
                 op if is_op(op) => toks.push(if is_unop(op) { UnOp(op) } else { BinOp(op) }),
-                _ => return Err(ParseError::UnbalancedParens),
+                _ => return Err(MathError::UnbalancedParens),
             }
         }
 
@@ -139,7 +143,7 @@ impl Term {
     ///
     /// assert_eq!(term.eval(), Ok(17_f64));
     /// ```
-    pub fn eval(&self) -> Result<f64, ParseError> {
+    pub fn eval(&self) -> Result<f64, MathError> {
         self.private_eval(None)
     }
 
@@ -147,17 +151,17 @@ impl Term {
     /// # Example
     /// ```
     /// # use eval::*;
-    /// let term = Term::new("2 + x*3").unwrap();
+    /// let term = Term::new("2 + $x*3").unwrap();
     ///
     /// assert_eq!(term.eval_var('x', 7_f64), Ok(23_f64));
     /// ```
-    pub fn eval_var(&self, name: char, value: f64) -> Result<f64, ParseError> {
+    pub fn eval_var(&self, name: char, value: f64) -> Result<f64, MathError> {
         if self.has_var {
             let mut map = HashMap::new();
             map.insert(name, value);
             self.private_eval(Some(map))
         } else {
-            Err(ParseError::UnknownVariable)
+            Err(MathError::UnknownVariable)
         }
     }
 
@@ -165,7 +169,7 @@ impl Term {
     /// # Example
     /// ```
     /// # use eval::*; use std::collections::HashMap;
-    /// let term = Term::new("3*(2+y) + x^2").unwrap();
+    /// let term = Term::new("3*(2+$y) + $x^2").unwrap();
     ///
     /// let mut map = HashMap::new();
     /// map.insert('x', 4_f64);
@@ -173,15 +177,15 @@ impl Term {
     ///
     /// assert_eq!(term.eval_vars(map), Ok(15_f64 + 16_f64));
     /// ```
-    pub fn eval_vars(&self, vars: HashMap<char, f64>) -> Result<f64, ParseError> {
+    pub fn eval_vars(&self, vars: HashMap<char, f64>) -> Result<f64, MathError> {
         if self.has_var {
             self.private_eval(Some(vars))
         } else {
-            Err(ParseError::UnknownVariable)
+            Err(MathError::UnknownVariable)
         }   
     }
 
-    fn private_eval(&self, op_vars: Option<HashMap<char, f64>>) -> Result<f64, ParseError> {
+    fn private_eval(&self, op_vars: Option<HashMap<char, f64>>) -> Result<f64, MathError> {
         let mut stack = Vec::new();
 
         // Go through all tokens
@@ -195,9 +199,9 @@ impl Term {
                     match op_vars {
                         Some(ref vars) => stack.push(match vars.get(&name) {
                             Some(&num) => num,
-                            None => return Err(ParseError::UnknownVariable)
+                            None => return Err(MathError::UnknownVariable)
                         }),
-                        None => return Err(ParseError::UnknownVariable)
+                        None => return Err(MathError::UnknownVariable)
                     }
                 },
 
@@ -210,22 +214,21 @@ impl Term {
                             '*' => b * a,
                             '/' => b / a,
                             '^' => b.powf(a),
-                            _ => return Err(ParseError::UnknownOperation),
+                            _ => unreachable!(),
                         });
                     } else {
-                        return Err(ParseError::FactorExpected);
+                        return Err(MathError::FactorExpected);
                     }
                 },
 
                 // Unary operation (like '~')
                 &UnOp(op) => {
                     if let Some(v) = stack.pop() {
-                        stack.push(match op {
-                            '~' => -v,
-                            _ => return Err(ParseError::UnknownOperation),                            
-                        });
+                        if op == '~' {
+                            stack.push(-v);   
+                        }
                     } else { 
-                        return Err(ParseError::FactorExpected);                        
+                        return Err(MathError::FactorExpected);                        
                     }
                 }
             }
@@ -236,7 +239,7 @@ impl Term {
             Ok(stack.pop().unwrap())
         // Stack should be empty, but is not
         } else {
-            Err(ParseError::FactorExpected)
+            Err(MathError::FactorExpected)
         }
     }
 }
@@ -282,12 +285,12 @@ fn is_unop(c: char) -> bool {
 mod tests {
     use std::collections::HashMap;
     use term::*;
-    use parse_error::*;
+    use error::*;
 
     #[test]
     fn term() {
         {
-            let term = Term::new("3*(2+x)+x^2").unwrap();
+            let term = Term::new("3*(2+$x)+$x^2").unwrap();
             assert_eq!(term.eval_var('x', 4f64), Ok(18f64+16f64));
         }
         {
@@ -295,7 +298,7 @@ mod tests {
             assert_eq!(term.eval(), Ok(17f64));
         }
         {
-            let term = Term::new("5 + x*3").unwrap();
+            let term = Term::new("5 + $x*3").unwrap();
             assert_eq!(term.eval_var('x', 4f64), Ok(17f64));
         }
         {
@@ -311,7 +314,7 @@ mod tests {
             assert_eq!(term.eval(), Ok(24f64));
         }
         {
-            let term = Term::new("5*y + x*3").unwrap();
+            let term = Term::new("5*$y + $x*3").unwrap();
             let mut map = HashMap::new();
             map.insert('x', 4f64);
             map.insert('y', 8f64);
@@ -339,11 +342,19 @@ mod tests {
         }
         {
             let term = Term::new("5+3*").unwrap();
-            assert_eq!(term.eval(), Err(ParseError::FactorExpected));
+            assert_eq!(term.eval(), Err(MathError::FactorExpected));
         }
         {
             let term = Term::new("-5^2").unwrap();
             assert_eq!(term.eval(), Ok(-25f64));
+        }
+        {
+            let term = Term::new("(-5)^2").unwrap();
+            assert_eq!(term.eval(), Ok(25f64));
+        }
+        {
+            let term = Term::new("5+$+1");
+            assert_eq!(term, Err(MathError::VariableExpected));
         }
     }
 }
