@@ -10,7 +10,7 @@ enum MathToken {
     Num(f64),
     BinOp(char),
     UnOp(char),
-    Func(String),
+    Func(char),
 }
 
 /// Evaluate an expression 
@@ -68,7 +68,11 @@ pub fn evaluate<S>(expression: S) -> Result<f64, ParseError> where S: Into<Strin
                         _ => return Err(ParseError::UnbalancedParens),
                     }
                 }    
-                toks.push(Func(buf))
+                stack.push(match buf.as_ref() {
+                    "sqrt" => 's',
+                    "ln" => 'l',
+                    _ => return Err(ParseError::UnknownFunction),
+                });
             }
 
             // Operator
@@ -86,7 +90,7 @@ pub fn evaluate<S>(expression: S) -> Result<f64, ParseError> where S: Into<Strin
 
                         // Pop operators from the stack as long as there precedency is higher (or equal)
                         if (!right_assoc(o1) && precedency(o1) <= precedency(o2)) || (right_assoc(o1) && precedency(o1) < precedency(o2)) {                                
-                            toks.push(if is_unop(o2) { UnOp(o2) } else { BinOp(o2) });
+                            toks.push(op_to_tok(o2));
                             stack.pop();
                         } else {
                             break;
@@ -105,7 +109,7 @@ pub fn evaluate<S>(expression: S) -> Result<f64, ParseError> where S: Into<Strin
                     match (paren, stack.pop()) {
                         // Parens are ok
                         (')', Some('(')) | (']', Some('[')) => break,                          
-                        (_, Some(op)) => toks.push(if is_unop(op) { UnOp(op) } else { BinOp(op) }),
+                        (_, Some(op)) => toks.push(op_to_tok(op)),
                         // Parens are unbalanced (or the wrong closing paren occured)
                         _ => return Err(ParseError::UnbalancedParens),
                     }
@@ -122,7 +126,7 @@ pub fn evaluate<S>(expression: S) -> Result<f64, ParseError> where S: Into<Strin
     stack.reverse();
     for item in stack {
         match item {
-            op if is_op(op) => toks.push(if is_unop(op) { UnOp(op) } else { BinOp(op) }),
+            op if is_op(op) => toks.push(op_to_tok(op)),
             _ => return Err(ParseError::UnbalancedParens),
         }
     }
@@ -154,8 +158,9 @@ pub fn evaluate<S>(expression: S) -> Result<f64, ParseError> where S: Into<Strin
 
             Func(name) => {
                 if let Some(v) = stack.pop() {
-                    stack.push(match name.as_ref() {
-                        "sqrt" => v.sqrt(),
+                    stack.push(match name {
+                        's' => v.sqrt(),
+                        'l' => v.ln(),
                         _ => return Err(ParseError::UnknownFunction),
                     });
                 } else {
@@ -191,6 +196,7 @@ pub fn evaluate<S>(expression: S) -> Result<f64, ParseError> where S: Into<Strin
 /// Get level of precedency of an operator
 fn precedency(op: char) -> u8 {
     match op {
+        's' | 'l' => 1,
         '+' | '-' => 2,
         '~' => 3,
         '/' | '*' => 4,
@@ -202,7 +208,7 @@ fn precedency(op: char) -> u8 {
 /// Check whether an operator is left or right associative
 fn right_assoc(op: char) -> bool {
     match op {
-        '+' | '-' | '*' | '/' | '~' => true,
+        '+' | '-' | '*' | '/' | '~' | 's' | 'l' => true,
         '^' => false,
         _ => panic!("not an operator: {}", op),
     }
@@ -210,14 +216,17 @@ fn right_assoc(op: char) -> bool {
 
 /// Check whether a char is an operator
 fn is_op(c: char) -> bool {
-    c == '+' || c == '-' || c == '*' || c == '/' || c == '^' || c == '~'
+    c == '+' || c == '-' || c == '*' || c == '/' || c == '^' || c == '~' || c == 's' || c == 'l'
 }
 
-/// Check whether a char is an unary operator
-fn is_unop(c: char) -> bool {
-    c == '~'
+fn op_to_tok(op: char) -> MathToken {
+    match op {
+        '+' | '-' | '*' | '/' | '^' => BinOp(op),
+        '~' => UnOp(op),
+        's' | 'l' => Func(op),
+        _ => panic!("not an operator: {}", op),
+    }
 }
-
 
 // ----------------------------------------------------------------------------------
 // Unit Tests
@@ -241,7 +250,9 @@ mod tests {
         assert_eq!(evaluate("(-5)^2"), Ok(25.0));
         assert_eq!(evaluate("4^0.5"), Ok(2.0));
 
-        // assert_eq!(evaluate("sqrt(9)"), Ok(3.0));
+        assert_eq!(evaluate("sqrt((9))"), Ok(3.0));
+        assert_eq!(evaluate("ln(1)"), Ok(0.0));
+        assert_eq!(evaluate("sqrt(4*10-4)"), Ok(6.0));       
 
         assert_eq!(evaluate("5+%+4"), Err(ParseError::UnknownSymbol));        
         assert_eq!(evaluate("5+3*"), Err(ParseError::FactorExpected));  
