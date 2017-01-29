@@ -4,10 +4,10 @@ use std::fmt;
 /// # Examples
 /// ```
 /// # use leval::*;
-/// assert_eq!(evaluate("5+%+4"), Err(ParseError::UnknownSymbol));        
-/// assert_eq!(evaluate("5+3*"), Err(ParseError::FactorExpected));  
-/// assert_eq!(evaluate("[2]*(5))"), Err(ParseError::UnbalancedParens));        
-/// assert_eq!(evaluate("5+3*"), Err(ParseError::FactorExpected)); 
+/// assert_eq!(evaluate("5+%+4"), Err(ParseError::UnknownSymbol));
+/// assert_eq!(evaluate("5+3*"), Err(ParseError::FactorExpected));
+/// assert_eq!(evaluate("[2]*(5))"), Err(ParseError::UnbalancedParens));
+/// assert_eq!(evaluate("5+3*"), Err(ParseError::FactorExpected));
 /// ```
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum ParseError {

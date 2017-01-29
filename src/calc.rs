@@ -24,7 +24,7 @@ pub fn calc(toks: Vec<MathToken>) -> Result<f64, ParseError> {
                 } else {
                     return Err(ParseError::FactorExpected);
                 }
-            },
+            }
 
             Func(name) => {
                 if let Some(v) = stack.pop() {
@@ -39,7 +39,7 @@ pub fn calc(toks: Vec<MathToken>) -> Result<f64, ParseError> {
                 } else {
                     return Err(ParseError::FactorExpected);
                 }
-            },
+            }
 
             // Unary operation (like '~')
             UnOp(op) => {
@@ -50,14 +50,14 @@ pub fn calc(toks: Vec<MathToken>) -> Result<f64, ParseError> {
                 } else {
                     return Err(ParseError::FactorExpected);
                 }
-            },
+            }
         }
     }
 
     // Everything went well
     if stack.len() == 1 {
         Ok(stack.pop().unwrap())
-    // Stack should be empty, but is not
+        // Stack should be empty, but is not
     } else {
         Err(ParseError::OperatorExpected)
     }

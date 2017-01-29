@@ -26,25 +26,26 @@ pub fn shunt(mut chars: LinkedList<char>) -> Result<Vec<MathToken>, ParseError> 
                     match next {
                         // Just another digit, so push it to the buffer
                         '0'...'9' => buf.push(chars.pop_front().unwrap()),   
-                        
-                        // There already was a point in this number           
+
+                        // There already was a point in this number
                         '.' if point => break,
-                        
+
                         // First point
-                        '.' => { 
+                        '.' => {
                             buf.push(chars.pop_front().unwrap());
                             point = true;
-                        },
+                        }
 
                         // End of number
                         _ => break,
                     }
                 }
                 toks.push(Num(buf.parse::<f64>().unwrap()));
-            },
+            }
 
-            // Function or Constant 
-            character @ 'a' ... 'z' | character @ 'A' ... 'Z' => {
+            // Function or Constant
+            character @ 'a'...'z' |
+            character @ 'A'...'Z' => {
                 use std::f64::consts;
 
                 // Holds the function name as string
@@ -56,14 +57,14 @@ pub fn shunt(mut chars: LinkedList<char>) -> Result<Vec<MathToken>, ParseError> 
                 while let Some(&next) = chars.front() {
                     match next {
                         // Just another character of the function
-                        'a' ... 'z' | 'A' ... 'Z' => buf.push(chars.pop_front().unwrap()),
+                        'a'...'z' | 'A'...'Z' => buf.push(chars.pop_front().unwrap()),
 
                         _ => {
-                            typus = if next == '(' { 'f' } else { 'c' };                            
+                            typus = if next == '(' { 'f' } else { 'c' };
                             break;
-                        },
+                        }
                     }
-                }  
+                }
 
                 if typus == 'f' {
                     stack.push(match buf.as_ref() {
@@ -76,7 +77,7 @@ pub fn shunt(mut chars: LinkedList<char>) -> Result<Vec<MathToken>, ParseError> 
                     });
                 } else if typus == 'c' {
                     toks.push(Num(match buf.as_ref() {
-                        "pi" |"PI" => consts::PI,
+                        "pi" | "PI" => consts::PI,
                         "e" => consts::E,
                         _ => return Err(ParseError::UnknownConstant),
                     }));
@@ -88,26 +89,29 @@ pub fn shunt(mut chars: LinkedList<char>) -> Result<Vec<MathToken>, ParseError> 
                 // o1 is an unary operator
                 if is_op(last) || last == '(' || last == '[' || last == ' ' {
                     match o1 {
-                        '+' => {},
+                        '+' => {}
                         '-' => stack.push('~'),
                         _ => return Err(ParseError::UnknownSymbol), 
                     }
-                // o1 is a binary operator or a function
+                    // o1 is a binary operator or a function
                 } else {
-                    while let Some(&o2) = stack.last() {                        
-                        if !is_op(o2) { break; }
+                    while let Some(&o2) = stack.last() {
+                        if !is_op(o2) {
+                            break;
+                        }
 
                         // Pop operators from the stack as long as there precedency is higher (or equal)
-                        if (!right_assoc(o1) && precedency(o1) <= precedency(o2)) || (right_assoc(o1) && precedency(o1) < precedency(o2)) {                                
+                        if (!right_assoc(o1) && precedency(o1) <= precedency(o2)) ||
+                           (right_assoc(o1) && precedency(o1) < precedency(o2)) {
                             toks.push(op_to_tok(o2));
                             stack.pop();
                         } else {
                             break;
                         }
                     }
-                    stack.push(o1); 
+                    stack.push(o1);
                 }
-            },
+            }
 
             // Opening Parenthesis
             paren @ '(' | paren @ '[' => stack.push(paren),
@@ -125,10 +129,10 @@ pub fn shunt(mut chars: LinkedList<char>) -> Result<Vec<MathToken>, ParseError> 
                 }
                 if let Some(&op) = stack.last() {
                     if is_func(op) {
-                        toks.push(op_to_tok(stack.pop().unwrap()));                        
+                        toks.push(op_to_tok(stack.pop().unwrap()));
                     }
                 }
-            },
+            }
 
             // Invalid Symbol
             _ => return Err(ParseError::UnknownSymbol),
@@ -184,7 +188,7 @@ fn is_op(c: char) -> bool {
 /// Check wheter a char is the short form of a function
 #[inline]
 fn is_func(c: char) -> bool {
-     c == 's' || c == 'c' || c == 't' || c == 'l' || c == 'r'
+    c == 's' || c == 'c' || c == 't' || c == 'l' || c == 'r'
 }
 
 /// Convert an char operator into a MathToken Operation/ Function
