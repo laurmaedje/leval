@@ -44,7 +44,7 @@ pub fn shunt(mut chars: LinkedList<char>) -> Result<Vec<MathToken>, ParseError> 
             },
 
             // Function or Constant 
-            character @ 'a' ... 'z' => {
+            character @ 'a' ... 'z' | character @ 'A' ... 'Z' => {
                 use std::f64::consts;
 
                 // Holds the function name as string
@@ -56,7 +56,7 @@ pub fn shunt(mut chars: LinkedList<char>) -> Result<Vec<MathToken>, ParseError> 
                 while let Some(&next) = chars.front() {
                     match next {
                         // Just another character of the function
-                        'a' ... 'z' => buf.push(chars.pop_front().unwrap()),
+                        'a' ... 'z' | 'A' ... 'Z' => buf.push(chars.pop_front().unwrap()),
 
                         _ => {
                             typus = if next == '(' { 'f' } else { 'c' };                            

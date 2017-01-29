@@ -3,7 +3,7 @@ use std::fmt;
 /// Representation of any Error that can occur while parsing.
 /// # Examples
 /// ```
-/// # use eval::*;
+/// # use leval::*;
 /// assert_eq!(evaluate("5+%+4"), Err(ParseError::UnknownSymbol));        
 /// assert_eq!(evaluate("5+3*"), Err(ParseError::FactorExpected));  
 /// assert_eq!(evaluate("[2]*(5))"), Err(ParseError::UnbalancedParens));        
