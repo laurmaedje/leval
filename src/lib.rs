@@ -69,6 +69,9 @@ mod tests {
         assert_eq!(evaluate("(-5)^2"), Ok(25.0));
         assert_eq!(evaluate("4^0.5"), Ok(2.0));
 
+        assert_eq!(evaluate("0-5-5"), Ok(-10.0));
+        assert_eq!(evaluate("10-5-5"), Ok(0.0));        
+
         assert_eq!(evaluate("5+%+4"), Err(ParseError::UnknownSymbol));
         assert_eq!(evaluate("5+3*"), Err(ParseError::FactorExpected));
         assert_eq!(evaluate("[2]*(5))"), Err(ParseError::UnbalancedParens));

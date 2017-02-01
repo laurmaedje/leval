@@ -173,8 +173,8 @@ fn precedency(op: char) -> u8 {
 #[inline]
 fn right_assoc(op: char) -> bool {
     match op {
-        '+' | '-' | '*' | '/' | '~' | 's' | 'c' | 't' | 'l' | 'r' => true,
-        '^' => false,
+        '^' => true,
+        '+' | '-' | '*' | '/' | '~' | 's' | 'c' | 't' | 'l' | 'r' => false,        
         _ => panic!("not an operator: {}", op),
     }
 }
