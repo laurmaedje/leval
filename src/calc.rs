@@ -2,6 +2,7 @@ use error::*;
 use token::MathToken;
 use token::MathToken::*;
 
+/// Calculate a tokenized RPN-notated Expression
 pub fn calc(toks: Vec<MathToken>) -> Result<f64, ParseError> {
     let mut stack: Vec<f64> = Vec::new();
 
@@ -54,10 +55,11 @@ pub fn calc(toks: Vec<MathToken>) -> Result<f64, ParseError> {
         }
     }
 
-    // Everything went well
-    if stack.len() == 1 {
+    let len = stack.len();
+    if len == 0 {
+        Err(ParseError::FactorExpected)
+    } else if len == 1 {
         Ok(stack.pop().unwrap())
-        // Stack should be empty, but is not
     } else {
         Err(ParseError::OperatorExpected)
     }

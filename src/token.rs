@@ -1,4 +1,4 @@
-/// A MathToken is a Token in a RPN-notated Expression
+/// A MathToken is a Token in an Expression, like a Number or Operator
 #[derive(Debug, PartialEq, Clone)]
 pub enum MathToken {
     Num(f64),
